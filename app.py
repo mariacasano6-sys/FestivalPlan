@@ -107,6 +107,46 @@ if pagina == "🗺️ Profilo paese":
         
     st.subheader(f"Cluster: **{cluster_name}**")
 
+    # Paesi che appartengono allo stesso cluster
+    paesi_cluster = df_paese[df_paese['cluster'] == cluster_id].index.tolist()
+    nomi_cluster_paesi = sorted([nomi_paesi.get(p, p) for p in paesi_cluster])
+    st.markdown(f"🌍 **Paesi in questo cluster ({len(paesi_cluster)}):**")
+    st.markdown(f"{', '.join(nomi_cluster_paesi)}")
+
+    # Grafico a linee con i profili medi di tutti i cluster
+    # Grafico a linee con i profili medi normalizzati di tutti i cluster
+    st.subheader("📈 Confronto profili medi tra cluster")
+
+    scaler_linee = MinMaxScaler()
+    df_paese_norm_linee = pd.DataFrame(
+        scaler_linee.fit_transform(df_paese[features_cluster]),
+        index=df_paese.index,
+        columns=features_cluster
+    )
+    df_paese_norm_linee['cluster'] = df_paese['cluster']
+
+    medie_cluster = df_paese_norm_linee.groupby('cluster')[features_cluster].mean()
+    medie_cluster.index = medie_cluster.index.map(nomi_cluster)
+
+    fig_linee = go.Figure()
+    for cname, row in medie_cluster.iterrows():
+        fig_linee.add_trace(go.Scatter(
+            x=features_cluster,
+            y=row.values,
+            mode='lines+markers',
+            name=cname,
+            line=dict(color=colori_cluster[cname], width=3 if cname == cluster_name else 1.5),
+            opacity=1.0 if cname == cluster_name else 0.4
+        ))
+
+    fig_linee.update_layout(
+        title='Valori medi delle features per cluster',
+        xaxis_title='Feature',
+        yaxis_title='Valore medio (normalizzato 0-1)',
+        showlegend=True
+    )
+    st.plotly_chart(fig_linee, use_container_width=True)
+
     # Normalizziamo tutto df_paese con MinMaxScaler
     scaler_viz = MinMaxScaler()
     df_paese_norm = pd.DataFrame(
